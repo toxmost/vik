@@ -1,0 +1,54 @@
+language: scala
+scala: 2.11.7
+sudo: false
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.5
+    packages:
+      - clang-3.5
+      - p7zip-full
+
+cache:
+  directories:
+    - $HOME/cache
+
+env:
+  matrix:
+    # Test builds first, since they don't upload things.
+    - TEST_GOAL=coverage
+    - TEST_GOAL=performance
+    # Production builds after test builds so only tested artifacts are uploaded.
+    - TARGET=x86_64-linux
+    - TARGET=aarch64-linux-android
+    - TARGET=arm-linux-androideabi
+    - TARGET=i686-linux-android
+    - TARGET=x86_64-linux-android
+
+matrix:
+  fast_finish: true
+
+install:
+  # Move files from cache directory.
+  - make cache
+
+script:
+  - export NDK_HOME=$HOME/android-ndk
+  # Setup/build/install/test steps, all together.
+  - mkdir -p /tmp/android-travis
+  - make all
+
+before_cache:
+  - make upload
+  # Clean up cache.
+  - find $HOME/cache/ivy2 -type f -name "ivydata-*.properties" -delete
+  - find $HOME/cache/sbt/boot -name "sbt.*.lock" -delete
+
+branches:
+  only:
+    - master
+
+git:
+  depth: 1
